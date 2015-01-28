@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -214,10 +215,12 @@ namespace {
         return V;
       }
                                                                                    
-      // If it's a constant, just create a constant expression.
+      // If it's a constant to an integer, just create a constant expression.
       if (Constant *C = dyn_cast<Constant>(V)) {
-        Constant *CE = ConstantExpr::getZExtOrBitCast(C, Ty);
-        return CE;
+        if (C->getType()->isIntOrIntVectorTy()) {
+          Constant *CE = ConstantExpr::getZExtOrBitCast(C, Ty);
+          return CE;
+        }
       }
       // Otherwise, insert a cast instruction.
       //return CastInst::CreateZExtOrBitCast(V, Ty, Name, InsertPt);
