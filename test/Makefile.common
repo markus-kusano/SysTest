@@ -1,0 +1,33 @@
+#OPT=/home/markus/src/install-3.5/bin/opt
+OPT=opt
+# Location of OPT pass library file
+SYSTEST_SO=/home/markus/src/SysTest/src/llvm/build/systest/libSysTestInst.so
+# Location of instrumentation runtime library file
+INSTRUM_SO=/home/markus/src/SysTest/src/runtime
+
+## These should not need to be modified
+# Name of systest instrumentation runtime so
+INSTRUM_NAME=systest_runtime
+
+CFLAGS=-Wall -g
+
+all: main
+
+main_inst: main.c
+	# compile to LLVM IR
+	clang -emit-llvm -S $< -o $(basename $<).bc
+	# instrument
+	$(OPT) -load $(SYSTEST_SO) -systest_inst $(basename $<).bc > $(basename $<)_inst.bc
+	# compile to .s
+	llc $(basename $<)_inst.bc
+	# link
+	clang++ $(CFLAGS) $(basename $<)_inst.s -o main_inst -L$(INSTRUM_SO) -l$(INSTRUM_NAME) -pthread 
+
+main:
+	$(CC) $(CFLAGS) $(LDFLAGS) main.c -o main -pthread
+
+%.ll: %.bc
+	$(LLVMDIS) $< -o $@
+
+clean:
+	rm -f *.o *.ll *.bc *.s main main_inst out.log make.log
