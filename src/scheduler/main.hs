@@ -1,6 +1,9 @@
 -- Author: Markus Kusano
 --
--- DPOR Scheduler
+-- Main entry.
+-- Processes command line args and then explores the concurrent program.
+--
+-- Currently, this uses the DPOR scheduler
 --
 import Network.Socket (Socket, socket, Family(AF_UNIX), SocketType(Stream), bind, SockAddr(SockAddrUnix), listen, accept, sClose)
 import Network.Socket.ByteString (recv, sendAll)
@@ -18,6 +21,8 @@ import System.Console.GetOpt
 import Data.List
 import System.Process
 
+import Options.Applicative.Extra (execParser)
+import Opts (optParser, Options(..))
 import Transition (Transition(..), byteStringToTrans, getTransTId, sameTId, sameTId2, isAssertFail, TId)
 
 import State(State(..), TIdToSock, updateStateAfterExec, createInitState, prettyPrintState, isTIdMember, getTransSetTId, VectorClock, ClockVal, updateDoneSelAfterExec, disjointLockset, happensBefore, tIdSetInsTrans)
@@ -578,70 +583,10 @@ executeTrans st tr sock socks = do
   -- state of the thread (newTrans)
   return $ ((prevState, (updateStateAfterExec prevState tr ts)), newSocks)
 
--- Command line options
-data Options = Options { 
-                       -- Path to the program to execute. If it is empty,
-                       -- then the program runs in standalone mode (the user
-                       -- is required to execute the program)
-                         programPath :: String 
-                       -- Arguments to pass to program under test
-                       , programArgs :: [String]
-                       -- Verbose output
-                       , verbose :: Bool
-                       , disHelp :: Bool
-                       } 
-
-defaultOptions :: Options
-defaultOptions = Options { programPath = ""
-                         , programArgs = []
-                         , verbose = False
-                         , disHelp = False
-                         }
-
--- Option parser. Maps an Option to a new Option with its records updated. IO
--- is used to easily print information and exit
-options :: [OptDescr (Options -> Options)]
-options = [
-            Option ['v'] ["verbose"]
-            (NoArg (\opt -> opt { verbose = True }))
-            "verbose output"
-          , 
-            Option ['h'] ["help"]
-            (NoArg (\opt -> opt { disHelp = True }))
-            "display help"
-          ]
-
--- Process command line arguments. 
-getCmdOpts :: [String] -> IO Options
-getCmdOpts args = do
-  case getOpt Permute options args of
-    -- For now, any non-options are ignored (item 2 of the tuple)
-    (actions, nonOpts , []) -> case (length nonOpts) of
-            0 -> return (foldl (flip id) defaultOptions actions)
-            _ -> return (foldl (flip id)
-                (defaultOptions {
-                    programPath = (head nonOpts)
-                  , programArgs = tail nonOpts
-                    }) actions)
-    (_, _, errs) 
-        -> ioError (userError (concat errs ++ usageInfo header options))
-  where header = "Usage: SysTest [-vh] <prog name>"
-
-exitUsage :: IO ()
-exitUsage = do
-  putStrLn $ "Usage: SysTest [-vh] <prog name> <prog args>\n"
-          ++ "--verbose (-v): enable verbose output\n"
-          ++ "--help (-h): display this message\n"
-          ++ "If no program name is passed, then standalone mode is used.\n"
-          ++ "In standalone, the scheduler will wait for the user to execute."
-          ++ "\nthe program under test."
-  exitFailure
-        
-
-main :: IO ()
-main = withSocketsDo $ do 
-  args <- getArgs
-  opts <- getCmdOpts args
+mainOpts :: Options -> IO ()
+mainOpts opts = withSocketsDo $ do 
+  --args <- getArgs
+  --opts <- getCmdOpts args
 
   -- Delete the old socket incase it exists
   cleanupSocket sockPathStr
@@ -651,7 +596,8 @@ main = withSocketsDo $ do
   listen sock maxThreads
 
   when (verbose opts) $ putStrLn "Verbose output"
-  when (disHelp opts) $ exitUsage
+  putStrLn $ "Program Path: " ++ (show (programPath opts))
+  putStrLn $ "Arguments: " ++ (show (programArgs opts))
 
   -- TODO: If we want to fully control the program, it should be executed here
   execProcIfNotStandalone opts
@@ -678,3 +624,6 @@ main = withSocketsDo $ do
   sClose sock
   cleanupSocket sockPathStr
   return ()
+
+main :: IO()
+main = execParser optParser >>= mainOpts 

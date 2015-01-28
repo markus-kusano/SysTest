@@ -58,7 +58,13 @@ executable scheduler
   
   -- Other library packages from which modules are imported.
   --build-depends:       base >=4.6 && <4.7, containers >=0.5 && <0.6, network >=2.4 && <2.5, bytestring >=0.10 && <0.11, binary-strict >=0.4 && <0.5
-  build-depends:       base >=4.6 && <4.7, containers >=0.5 && <0.6, network >=2.4 && <2.5, bytestring >=0.10 && <0.11, binary-strict <=0.4.8, process >= 1.1, directory >= 1.2
+  build-depends:       base >=4.6 && <4.7
+                       , containers >=0.5 && <0.6
+                       , network >=2.4 && <2.5
+                       , bytestring >=0.10 && <0.11
+                       , binary-strict <=0.4.8, process >= 1.1
+                       , directory >= 1.2
+                       , optparse-applicative >= 0.11.0.1
   
   -- Directories containing source files.
   -- hs-source-dirs:      
