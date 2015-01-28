@@ -6,5 +6,5 @@ main: main.hs Transition.hs State.hs
 	cabal sandbox init; cabal install --prefix=`pwd`/install; cp install/bin/scheduler .
 
 clean:
-	rm -rf dist install cabal.sandbox.config .cabal-sandbox
+	rm -rf dist install cabal.sandbox.config .cabal-sandbox scheduler
 
